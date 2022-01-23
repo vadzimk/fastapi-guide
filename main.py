@@ -147,6 +147,18 @@ class Item(BaseModel):
     tags: Set[str]=set() # will remove duplicates from request
     images: Optional[List[Image]] = None
 
+    # inside model can declare examples of request body
+    # it will be automatically added to api docs
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Foo",
+                "description": "A very nice Item",
+                "price": 35.4,
+                "tax": 3.2,
+            }
+        }
+
 # This would mean that FastAPI would expect a body similar to:
 #
 # {
