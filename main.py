@@ -14,10 +14,10 @@
 
 # data validation by https://pydantic-docs.helpmanual.io/
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
-from typing import Optional, List
+from typing import Optional, List, Set, Dict
 
 from fastapi import FastAPI, Query, Path, Body
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
 
@@ -127,6 +127,14 @@ async def read_items(
         results.update({'q': q})
     return results
 
+# pydantic models can be nested - i.e type can be another model
+class Image(BaseModel):
+    url: HttpUrl # will be validated as url and documented
+    name: str
+
+@app.post('/images/multiple')
+async def create_multiple_images(images: List[Image]):
+    return images
 
 ## to send data in request.body use operations POST, DELETE, PATCH
 # to declare a request.body use Pydantic models
@@ -135,8 +143,23 @@ class Item(BaseModel):
     name: str  # required
     description: Optional[str] = Field(None, title='The description of the item', max_length=300)
     price: float = Field(..., gt=0, description='The price must be >0')
-    tax: Optional[float] = None
+    tax: Optional[float] = None,
+    tags: Set[str]=set() # will remove duplicates from request
+    images: Optional[List[Image]] = None
 
+# This would mean that FastAPI would expect a body similar to:
+#
+# {
+#     "name": "Foo",
+#     "description": "The pretender",
+#     "price": 42.0,
+#     "tax": 3.2,
+#     "tags": ["rock", "metal", "bar"],
+#     "images": [{
+#         "url": "http://example.com/baz.jpg",
+#         "name": "The Foo live"
+#     }]
+# }
 
 @app.post('/items/')
 async def create_item(item: Item):  # request.body variable
@@ -216,3 +239,11 @@ async def update_item(
 #         "tax": 3.2
 #     }
 # }
+
+# Bodies of arbitrary dicts
+@app.post('/index-weights/')
+async def create_index_weights(
+        weights: Dict[int, float] # bc it is not a primitive type, interpreted as body
+):
+    return weights
+
