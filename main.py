@@ -16,7 +16,7 @@
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List
 
-from fastapi import FastAPI, Query, Path
+from fastapi import FastAPI, Query, Path, Body
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -119,7 +119,7 @@ async def read_item(item_id: str, q: Optional[
 # path parameters and validators can be declared in the Path() default value
 @app.get('/items/{item_id}')
 async def read_items(
-        item_id: int = Path(..., title='The id of th item to get'), # is always required and declared with ... object
+        item_id: int = Path(..., title='The id of th item to get'),  # is always required and declared with ... object
         q: Optional[str] = Query(None, alias="item-query")
 ):
     results = {'item_id': item_id}
@@ -149,10 +149,70 @@ async def create_item(item: Item):  # request.body variable
 
 ## request.body and path parameters
 @app.put('/items/{item_id}')
-async def update_item(item_id: int, item: Item, q: Optional[str] = None):  # recognizes path parameter by name
-    # Pydantic model is recognized as the request.body
-    # if parameter is a primitive type it is interpreted as query parameter
+async def update_item(
+        item_id: int,  # recognizes path parameter by name
+        item: Item,  # Pydantic model is recognized as the request.body
+        q: Optional[str] = None  # if parameter is a primitive type it is interpreted as query parameter
+):
     result = {'item_id': item_id, **item.dict()}  # can merge two dicts z={**x, **y}
     if q:
         result.update({"q": q})
     return result
+
+
+class User(BaseModel):
+    username: str
+    full_name: Optional[str] = None
+
+
+# multiple body parameters
+@app.put('/items/{item_id}')
+async def update_item(
+        item_id: int,
+        item: Item,
+        user: User,
+        importance: int = Body(...)
+        # singular value will be interpreted as a query parameter if not defaulted to Body(...) object
+):
+    results = {'item_id': item_id, 'item': item, 'user': user}
+    return results
+
+
+# with more than one body parameters in the function FastAPI will use parameter names as keys in the body and expect body like
+# {
+#     "item": {
+#         "name": "Foo",
+#         "description": "The pretender",
+#         "price": 42.0,
+#         "tax": 3.2
+#     },
+#     "user": {
+#         "username": "dave",
+#         "full_name": "Dave Grohl"
+#     },
+#      "importance": 5
+# }
+
+# Embed a single body parameter
+# by default a body parameter is interpreted as a whole but with
+# item: Body(..., embed=True) it will expect a json with a key item
+# and extract just it
+@app.put('/items/{item_id}')
+async def update_item(
+        item_id: int,
+        item: Item = Body(..., embed=True)
+):
+    results = {'item_id': item_id, 'item': item}
+    return results
+
+# In this case FastAPI will expect a body like:
+#
+# {
+#     ...
+#     "item": {
+#         "name": "Foo",
+#         "description": "The pretender",
+#         "price": 42.0,
+#         "tax": 3.2
+#     }
+# }
