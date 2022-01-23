@@ -140,7 +140,7 @@ async def create_multiple_images(images: List[Image]):
 # to declare a request.body use Pydantic models
 # to declare additional validation and metadata use pydantic.Field
 class Item(BaseModel):
-    name: str  # required
+    name: str = Field(..., example='Foo')  # required, can pass extra argumens for documentation e.g example
     description: Optional[str] = Field(None, title='The description of the item', max_length=300)
     price: float = Field(..., gt=0, description='The price must be >0')
     tax: Optional[float] = None,
@@ -183,7 +183,7 @@ async def create_item(item: Item):  # request.body variable
 
 
 ## request.body and path parameters
-@app.put('/items/{item_id}')
+@app.put('/items1/{item_id}')
 async def update_item(
         item_id: int,  # recognizes path parameter by name
         item: Item,  # Pydantic model is recognized as the request.body
@@ -201,7 +201,7 @@ class User(BaseModel):
 
 
 # multiple body parameters
-@app.put('/items/{item_id}')
+@app.put('/items2/{item_id}')
 async def update_item(
         item_id: int,
         item: Item,
@@ -232,7 +232,7 @@ async def update_item(
 # by default a body parameter is interpreted as a whole but with
 # item: Body(..., embed=True) it will expect a json with a key item
 # and extract just it
-@app.put('/items/{item_id}')
+@app.put('/items3/{item_id}')
 async def update_item(
         item_id: int,
         item: Item = Body(..., embed=True)
