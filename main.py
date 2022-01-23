@@ -17,6 +17,7 @@ from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional
 
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -83,7 +84,37 @@ async def read_item(skip: int = 0, limit: int = 10):  # skip, limit are query pa
 
 
 @app.get('/items/{item_id}')
-async def read_item(item_id: str, q: Optional[str] = None): # query parameter q is optional, when default is not specified it becomes required
+async def read_item(item_id: str, q: Optional[
+    str] = None):  # query parameter q is optional, when default is not specified it becomes required
     if q:
         return {"item_id": item_id, 'q': q}
     return {'item_id': item_id}
+
+
+## to send data in request.body use operations POST, DELETE, PATCH
+# to declare a request.body use Pydantic models
+
+class Item(BaseModel):
+    name: str # required
+    description: Optional[str] = None # optional identified if there is default value but not the Optional type
+    price: float
+    tax: Optional[float] = None
+
+
+@app.post('/items')
+async def create_item(item: Item): # request.body variable
+    item_dict = item.dict()
+    if item.tax:
+        price_w_tax = item.price+item.tax
+        item_dict.update({'pirce_with_tax': price_w_tax})
+    return item_dict
+
+## request.body and path parameters
+@app.put('/items/{item_id}')
+async def update_item(item_id: int, item: Item, q:Optional[str]=None ): # recognizes path parameter by name
+    # Pydantic model is recognized as the request.body
+    # if parameter is a primitive type it is interpreted as query parameter
+    result = {'item_id': item_id, **item.dict()} # can merge two dicts z={**x, **y}
+    if q:
+        result.update({"q": q})
+    return result
