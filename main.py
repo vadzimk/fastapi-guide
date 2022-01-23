@@ -16,7 +16,7 @@
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Path
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -82,26 +82,28 @@ fake_items_db = [{'item_name': 'foo'}, {'item_name': 'bar'}, {'item_name': 'baz'
 async def read_item(skip: int = 0, limit: int = 10):  # skip, limit are query parameters
     return fake_items_db[skip:(skip + limit)]
 
+
 @app.get('/items/')
 async def read_items(q: Optional[str] = Query(
-    ..., # ... indicates that the query parameter is required as opposed to None which means optional
-    min_length=3, # Query provides validators
+    ...,  # ... indicates that the query parameter is required as opposed to None which means optional
+    min_length=3,  # Query provides validators
     max_length=50,
     regex="^fixedquery$",
-    title='Query string', # metadata for swagger documentation
+    title='Query string',  # metadata for swagger documentation
     description='Query string for the item s to search in the db',
-    alias='item-query' # can be used in place of a key
+    alias='item-query'  # can be used in place of a key
 )):
-
-    results = {'items': [{'item_id': 'Foo'},{'item_id': 'Bar'}]}
+    results = {'items': [{'item_id': 'Foo'}, {'item_id': 'Bar'}]}
     if q:
         results.update({'q': q})
     return results
 
+
 # query parameter can take multiple values
 # http://localhost:8000/items/?q=foo&q=bar
 @app.get('/items/')
-async def read_items(q: Optional[List[str]] = Query(...)): # need to explicitly use Query otherwise it will be interpreted as a request body
+async def read_items(q: Optional[List[str]] = Query(
+    ...)):  # need to explicitly use Query otherwise it will be interpreted as a request body
     query_items = {'q': q}
     return query_items
 
@@ -114,30 +116,43 @@ async def read_item(item_id: str, q: Optional[
     return {'item_id': item_id}
 
 
+# path parameters and validators can be declared in the Path() default value
+@app.get('/items/{item_id}')
+async def read_items(
+        item_id: int = Path(..., title='The id of th item to get'), # is always required and declared with ... object
+        q: Optional[str] = Query(None, alias="item-query")
+):
+    results = {'item_id': item_id}
+    if q:
+        results.update({'q': q})
+    return results
+
+
 ## to send data in request.body use operations POST, DELETE, PATCH
 # to declare a request.body use Pydantic models
 
 class Item(BaseModel):
-    name: str # required
-    description: Optional[str] = None # optional identified if there is default value but not the Optional type
+    name: str  # required
+    description: Optional[str] = None  # optional identified if there is default value but not the Optional type
     price: float
     tax: Optional[float] = None
 
 
 @app.post('/items/')
-async def create_item(item: Item): # request.body variable
+async def create_item(item: Item):  # request.body variable
     item_dict = item.dict()
     if item.tax:
-        price_w_tax = item.price+item.tax
+        price_w_tax = item.price + item.tax
         item_dict.update({'pirce_with_tax': price_w_tax})
     return item_dict
 
+
 ## request.body and path parameters
 @app.put('/items/{item_id}')
-async def update_item(item_id: int, item: Item, q:Optional[str]=None ): # recognizes path parameter by name
+async def update_item(item_id: int, item: Item, q: Optional[str] = None):  # recognizes path parameter by name
     # Pydantic model is recognized as the request.body
     # if parameter is a primitive type it is interpreted as query parameter
-    result = {'item_id': item_id, **item.dict()} # can merge two dicts z={**x, **y}
+    result = {'item_id': item_id, **item.dict()}  # can merge two dicts z={**x, **y}
     if q:
         result.update({"q": q})
     return result
