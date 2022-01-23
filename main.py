@@ -17,7 +17,7 @@ from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List
 
 from fastapi import FastAPI, Query, Path, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
@@ -130,11 +130,11 @@ async def read_items(
 
 ## to send data in request.body use operations POST, DELETE, PATCH
 # to declare a request.body use Pydantic models
-
+# to declare additional validation and metadata use pydantic.Field
 class Item(BaseModel):
     name: str  # required
-    description: Optional[str] = None  # optional identified if there is default value but not the Optional type
-    price: float
+    description: Optional[str] = Field(None, title='The description of the item', max_length=300)
+    price: float = Field(..., gt=0, description='The price must be >0')
     tax: Optional[float] = None
 
 
