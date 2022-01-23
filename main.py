@@ -14,9 +14,9 @@
 
 # data validation by https://pydantic-docs.helpmanual.io/
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
-from typing import Optional
+from typing import Optional, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -82,6 +82,29 @@ fake_items_db = [{'item_name': 'foo'}, {'item_name': 'bar'}, {'item_name': 'baz'
 async def read_item(skip: int = 0, limit: int = 10):  # skip, limit are query parameters
     return fake_items_db[skip:(skip + limit)]
 
+@app.get('/items/')
+async def read_items(q: Optional[str] = Query(
+    ..., # ... indicates that the query parameter is required as opposed to None which means optional
+    min_length=3, # Query provides validators
+    max_length=50,
+    regex="^fixedquery$",
+    title='Query string', # metadata for swagger documentation
+    description='Query string for the item s to search in the db',
+    alias='item-query' # can be used in place of a key
+)):
+
+    results = {'items': [{'item_id': 'Foo'},{'item_id': 'Bar'}]}
+    if q:
+        results.update({'q': q})
+    return results
+
+# query parameter can take multiple values
+# http://localhost:8000/items/?q=foo&q=bar
+@app.get('/items/')
+async def read_items(q: Optional[List[str]] = Query(...)): # need to explicitly use Query otherwise it will be interpreted as a request body
+    query_items = {'q': q}
+    return query_items
+
 
 @app.get('/items/{item_id}')
 async def read_item(item_id: str, q: Optional[
@@ -101,7 +124,7 @@ class Item(BaseModel):
     tax: Optional[float] = None
 
 
-@app.post('/items')
+@app.post('/items/')
 async def create_item(item: Item): # request.body variable
     item_dict = item.dict()
     if item.tax:
