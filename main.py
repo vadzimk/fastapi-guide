@@ -16,7 +16,7 @@
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List, Set, Dict
 
-from fastapi import FastAPI, Query, Path, Body, Cookie
+from fastapi import FastAPI, Query, Path, Body, Cookie, Header
 from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
@@ -107,10 +107,20 @@ async def read_items(q: Optional[str] = Query(
 #     query_items = {'q': q}
 #     return query_items
 
+# @app.get('/items/')
+# async def read_items(ads_id: Optional[str] = Cookie(None)):
+#     """ Query, Path, Cookie are subclass from Param, the import is for a function that returns the corresponding class"""
+#     return {'ads_id': ads_id}
+
 @app.get('/items/')
-async def read_items(ads_id: Optional[str] = Cookie(None)):
-    """ Query, Path, Cookie are subclass from Param, the import is for a function that returns the corresponding class"""
-    return {'ads_id': ads_id}
+async def read_items(
+        user_agent: Optional[str] = Header(None),  # Header will convert header key from hyphenated to underscored
+        x_token: Optional[List[str]]=Header(None) # to declare that a header has multiple values and can be accessed with a list
+        # X-Token: foo
+        # X-Token: bar
+):
+
+    return {'user-agent': user_agent}
 
 @app.get('/items/{item_id}')
 async def read_item(item_id: str, q: Optional[
