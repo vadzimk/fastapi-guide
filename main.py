@@ -16,7 +16,7 @@
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List, Set, Dict
 
-from fastapi import FastAPI, Query, Path, Body
+from fastapi import FastAPI, Query, Path, Body, Cookie
 from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
@@ -101,12 +101,16 @@ async def read_items(q: Optional[str] = Query(
 
 # query parameter can take multiple values
 # http://localhost:8000/items/?q=foo&q=bar
-@app.get('/items/')
-async def read_items(q: Optional[List[str]] = Query(
-    ...)):  # need to explicitly use Query otherwise it will be interpreted as a request body
-    query_items = {'q': q}
-    return query_items
+# @app.get('/items/')
+# async def read_items(q: Optional[List[str]] = Query(
+#     ...)):  # need to explicitly use Query otherwise it will be interpreted as a request body
+#     query_items = {'q': q}
+#     return query_items
 
+@app.get('/items/')
+async def read_items(ads_id: Optional[str] = Cookie(None)):
+    """ Query, Path, Cookie are subclass from Param, the import is for a function that returns the corresponding class"""
+    return {'ads_id': ads_id}
 
 @app.get('/items/{item_id}')
 async def read_item(item_id: str, q: Optional[
