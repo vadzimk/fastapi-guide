@@ -13,6 +13,7 @@
 # based on async lib https://anyio.readthedocs.io/
 
 # data validation by https://pydantic-docs.helpmanual.io/
+import http
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List, Set, Dict
 
@@ -204,7 +205,10 @@ class Item(BaseModel):
 # }
 
 # @app.post('/items/')
-@app.post('/items/', response_model=Item) #  declare the Pydantic model (or list) that will be used
+@app.post('/items/',
+          response_model=Item, #  declare the Pydantic model (or list) that will be used
+          status_code=http.HTTPStatus.CREATED # alternatively a number 201
+          )
 async def create_item(item: Item):  # request.body variable
     item_dict = item.dict()
     if item.tax:
