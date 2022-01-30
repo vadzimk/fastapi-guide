@@ -17,7 +17,7 @@ import http
 from enum import Enum, unique  # https://docs.python.org/3/library/enum.html
 from typing import Optional, List, Set, Dict
 
-from fastapi import FastAPI, Query, Path, Body, Cookie, Header
+from fastapi import FastAPI, Query, Path, Body, Cookie, Header, HTTPException
 from pydantic import BaseModel, Field, HttpUrl, EmailStr
 
 app = FastAPI()
@@ -43,22 +43,24 @@ async def read_user_me():
 async def read_user(user_id: str):
     return {'user_id': user_id}
 
+
 class UserIn(BaseModel):
     username: str
     password: str
     email: EmailStr
-    full_name: Optional[str]=None
+    full_name: Optional[str] = None
+
 
 class UserOut(BaseModel):
     username: str
     email: EmailStr
-    full_name: Optional[str]=None
+    full_name: Optional[str] = None
 
 
+@app.post('/user', response_model=UserOut)  # Pydantic model for output
+async def create_user(user: UserIn):  # Pydantic model for input
+    return user  # user in response_model has no password so pydantic will filter this field out and it will not appear in the response
 
-@app.post('/user', response_model=UserOut) # Pydantic model for output
-async def create_user(user: UserIn): # Pydantic model for input
-    return user # user in response_model has no password so pydantic will filter this field out and it will not appear in the response
 
 # Predefined values inherit from Enum class and possibly str
 @unique
@@ -132,16 +134,27 @@ async def read_items(q: Optional[str] = Query(
 @app.get('/items/')
 async def read_items(
         user_agent: Optional[str] = Header(None),  # Header will convert header key from hyphenated to underscored
-        x_token: Optional[List[str]]=Header(None) # to declare that a header has multiple values and can be accessed with a list
+        x_token: Optional[List[str]] = Header(None)
+        # to declare that a header has multiple values and can be accessed with a list
         # X-Token: foo
         # X-Token: bar
 ):
-
     return {'user-agent': user_agent}
+
+
+items = {'foo': 'The foo wrestlers'}
+
 
 @app.get('/items/{item_id}')
 async def read_item(item_id: str, q: Optional[
     str] = None):  # query parameter q is optional, when default is not specified it becomes required
+    if item_id not in items:
+        # to return response with error raise HTTPException
+        raise HTTPException(
+            status_code=404,
+            detail='Item not found',  # detail will become the body json with key detail
+            headers={'X-Error': 'there goes my error'}  # add custom header
+        )
     if q:
         return {"item_id": item_id, 'q': q}
     return {'item_id': item_id}
@@ -158,14 +171,17 @@ async def read_items(
         results.update({'q': q})
     return results
 
+
 # pydantic models can be nested - i.e type can be another model
 class Image(BaseModel):
-    url: HttpUrl # will be validated as url and documented
+    url: HttpUrl  # will be validated as url and documented
     name: str
+
 
 @app.post('/images/multiple')
 async def create_multiple_images(images: List[Image]):
     return images
+
 
 ## to send data in request.body use operations POST, DELETE, PATCH
 # to declare a request.body use Pydantic models
@@ -175,7 +191,7 @@ class Item(BaseModel):
     description: Optional[str] = Field(None, title='The description of the item', max_length=300)
     price: float = Field(..., gt=0, description='The price must be >0')
     tax: Optional[float] = 10.5,
-    tags: Set[str]=set() # will remove duplicates from request
+    tags: Set[str] = set()  # will remove duplicates from request
     images: Optional[List[Image]] = None
 
     # inside model can declare examples of request body
@@ -189,6 +205,7 @@ class Item(BaseModel):
                 "tax": 3.2,
             }
         }
+
 
 # This would mean that FastAPI would expect a body similar to:
 #
@@ -206,8 +223,8 @@ class Item(BaseModel):
 
 # @app.post('/items/')
 @app.post('/items/',
-          response_model=Item, #  declare the Pydantic model (or list) that will be used
-          status_code=http.HTTPStatus.CREATED # alternatively a number 201
+          response_model=Item,  # declare the Pydantic model (or list) that will be used
+          status_code=http.HTTPStatus.CREATED  # alternatively a number 201
           )
 async def create_item(item: Item):  # request.body variable
     item_dict = item.dict()
@@ -220,7 +237,7 @@ async def create_item(item: Item):  # request.body variable
 ## request.body and path parameters
 @app.put('/items1/{item_id}',
          response_model=Item,
-         response_model_exclude_unset=True) # the default values won't be included in the response, only the values that are actually set
+         response_model_exclude_unset=True)  # the default values won't be included in the response, only the values that are actually set
 async def update_item(
         item_id: int,  # recognizes path parameter by name
         item: Item,  # Pydantic model is recognized as the request.body
@@ -277,6 +294,7 @@ async def update_item(
     results = {'item_id': item_id, 'item': item}
     return results
 
+
 # In this case FastAPI will expect a body like:
 #
 # {
@@ -292,7 +310,6 @@ async def update_item(
 # Bodies of arbitrary dicts
 @app.post('/index-weights/')
 async def create_index_weights(
-        weights: Dict[int, float] # bc it is not a primitive type, interpreted as body
+        weights: Dict[int, float]  # bc it is not a primitive type, interpreted as body
 ):
     return weights
-
