@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from pydantic import BaseModel, EmailStr
 
 multi_model_app = FastAPI()
@@ -37,12 +37,28 @@ def fake_save_user(user_in: UserIn):
     return user_in_db
 
 
+class Tags(Enum):
+    items = 'items'
+    users = 'users'
+
+
 @multi_model_app.post('/user',
                       response_model=UserOut,
                       # possible values:
                       # response_model=Union[MoreSpecificType, LessSpecificType]
                       # response_model=Dict[str,float]
+                      status_code=status.HTTP_201_CREATED,  # or 201 number or import from starlette.status
+                      tags=[Tags.users],  # you can add tags to OpenApi schema/documentation as a string or Enum
+                      summary='Create a user',
+                      description='Create a user with username, email, full_name',
+                      # escription can be declared in the path operation as docstring and FastApi will read it from there
+                      response_description='the created item', # is actually required
+                      deprecated=True, # path operation can be marked as depricated in the documentation
                       )
 async def create_user(user_in: UserIn):
+    """
+    Create a user with username, email, full_name
+    can contain markdown
+    """
     user_saved = fake_save_user(user_in)
     return user_saved
