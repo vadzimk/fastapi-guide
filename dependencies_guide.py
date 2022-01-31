@@ -20,6 +20,6 @@ async def read_items(commons: dict = Depends(common_parameters)):
 
 @dependencies_guide_app.get('/users/')
 async def read_users(
-        commons: dict = Depends(common_parameters) # Depends takes a single parameter, the dependency function
+        commons: dict = Depends(common_parameters) # Depends takes a single parameter, the dependency callable or function
 ):
     return commons
