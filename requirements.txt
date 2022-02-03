@@ -2,3 +2,6 @@ uvicorn[standard]
 fastapi
 pydantic
 python-multipart
+python-jose[cryptography]
+pyca/cryptography
+passlib[bcrypt]
